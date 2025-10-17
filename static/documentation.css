@@ -1,0 +1,17 @@
+#doc-div{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 430px;
+    height: 760px;
+    padding: 0%;
+    margin: 0%;
+}
+
+#doc{
+    width: 370px;
+    height: 720px;
+    border: #AA3ADA 10px solid;
+    padding: 0%;
+    margin: 0%;
+}

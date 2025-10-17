@@ -1,0 +1,319 @@
+#predict-main{
+    display: grid;
+    grid-template-columns: 430px;
+    grid-template-rows: 380px 380px;
+}
+
+#settings{
+    grid-column-start: 1;
+    grid-row-start: 2;
+}
+
+#settings{
+    display: grid;
+    background-image: url("/static/images/setback.png");
+    grid-template-columns: 10px 410px 10px;
+    grid-template-rows: 10px 100px 10px 140px 10px 100px 10px;
+}
+
+#order{
+    background-color: white;
+    grid-column-start: 2;
+    grid-row-start: 2;
+    border-radius: 10px;
+}
+
+#rec{
+    background-color: white;
+    grid-column-start: 2;
+    grid-row-start: 4;
+    border-radius: 10px;
+}
+
+#pred{
+    background-color: white;
+    grid-column-start: 2;
+    grid-row-start: 6;
+    border-radius: 10px; 
+}
+
+#order{
+    display: grid;
+    grid-template-columns: 10px 390px;
+    grid-template-rows: 10px 20px 10px 20px 10px 20px 10px;
+}
+
+#zagalovok{
+    padding: 0%;
+    margin: 0%;
+    grid-column-start: 2;
+    grid-row-start: 2;
+}
+
+.predict-text{
+    padding: 0%;
+    margin: 0%;
+    font-size: 20px;
+}
+
+#first-row{
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    grid-column-start: 2;
+    grid-row-start: 4;
+}
+
+#second-row{
+    display: flex;
+    align-items: center;
+    justify-content: right;
+    grid-column-start: 2;
+    grid-row-start: 6;
+}
+
+.first-text-pred{
+    flex-basis: 50%;
+}
+
+.second-text-pred{
+    flex-basis: 50%;
+}
+
+#rec{
+    display: grid;
+    grid-template-columns: 10px 110px 30px 110px 30px 110px 10px;
+    grid-template-rows: 10px 10px 10px 100px 10px;
+}
+
+.card{
+    height: 100px;
+    width: 110px;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+}
+
+#card1{
+    grid-column-start: 2;
+    grid-row-start: 4;
+}
+
+#card2{
+    grid-column-start: 4;
+    grid-row-start: 4;
+}
+
+#card3{
+    grid-column-start: 6;
+    grid-row-start: 4;
+}
+
+.recommendations-text{
+    padding: 0%;
+    margin: 0%;
+    font-size: 14px;
+}
+
+#zagalovok2{
+    grid-column-start: 2;
+    grid-row-start: 2;
+}
+
+#pred{
+    display: grid;
+    grid-template-columns: 240px 170px;
+    grid-template-rows: 100px;
+}
+
+#paramet{
+    display: grid;
+    grid-template-columns: 10px 220px 10px ;
+    grid-template-rows: 10px 10px 20px 20px 10px 20px 10px;
+}
+
+#row{
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    grid-column-start: 2;
+    grid-row-start: 2;
+}
+
+.text-row{
+    font-size: 10px;
+}
+
+.ver{
+    flex-basis: 50%;  
+}
+
+.inc{
+    flex-basis: 50%;
+}
+
+
+
+#inp-ran{
+    grid-column-start: 2;
+    grid-row-start: 4;
+    grid-row-end: 7;
+}
+
+#inp-ran{
+    display: grid;
+    grid-template-columns: 220px;
+    grid-template-rows: 20px 20px 10px;
+}
+
+
+#input-text{
+    padding: 4px;
+    margin: 0px;
+    grid-row-start: 1;
+    border-radius: 20px;
+    border: 0px;
+    box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.3) inset;
+}
+
+
+
+
+
+/* Стили для ползунка с ID rang */
+#rang {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 10px;
+    background: transparent;
+    outline: none;
+    margin: 10px 0;
+}
+
+/* Webkit браузеры (Chrome, Safari, Edge) */
+#rang::-webkit-slider-container {
+    height: 10px;
+    background: linear-gradient(to right, #AA3ADA, #6973AC);
+    border-radius: 5px;
+}
+
+#rang::-webkit-slider-track {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 10px;
+    background: linear-gradient(to right, #AA3ADA, #6973AC);
+    border-radius: 5px;
+    border: none;
+}
+
+#rang::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    background: #EEEEEE;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    margin-top: -5px;
+}
+
+/* Firefox */
+#rang::-moz-range-track {
+    width: 100%;
+    height: 10px;
+    background: linear-gradient(to right, #AA3ADA, #6973AC);
+    border-radius: 5px;
+    border: none;
+}
+
+#rang::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: #EEEEEE;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    box-sizing: border-box;
+}
+
+/* Упрощенный вариант - если выше не работает */
+#rang.simple {
+
+    width: 100%;
+    height: 10px;
+    background: linear-gradient(to right, #AA3ADA, #6973AC);
+    border-radius: 5px;
+    outline: none;
+}
+
+#rang.simple::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    background: #EEEEEE;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+#rang.simple::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: #EEEEEE;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+#rang{
+    padding: 0%;
+    margin: 0%;
+    grid-row-start: 3;
+
+}
+
+#price{
+    display: grid;
+    grid-template-columns: 170px;
+    grid-template-rows: 10px 30px 10px 40px 10px;
+}
+
+#price-itog{
+    display: flex;
+    grid-row-start: 2;
+    align-items: center;
+    justify-content: center;
+}
+
+#price-text{
+    font-size: 24px;
+}
+
+#button-div{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0%;
+    margin: 0%;
+    grid-row-start: 4;
+    background-image: url("/static/images/button-back.png");
+    background-size: 100%;
+    background-repeat: no-repeat;
+    width: 160px;
+    height: 40px;
+}
+
+#button{
+    padding: 0%;
+    margin: 0%;
+    width: 150px;
+    height: 30px;
+    border-radius: 10px;
+    border: none;
+    background-color: white;
+}

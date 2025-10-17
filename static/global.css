@@ -1,0 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Sansation:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap');
+
+body{
+    padding: 0%;
+    margin: 0%;
+}
+
+.navdiv{
+    display: grid;
+    width: 430px;
+    height: 170px;
+    background-image: url("/static/images/Navdiv.png");
+    grid-template-columns: 430px;
+    grid-template-rows: 100px 70px;
+}
+
+.navdiv-part1{
+    grid-row-start: 1;
+    grid-column-start: 1;
+}
+
+.navdiv-part2{
+    grid-row-start: 2;
+    grid-column-start: 1;
+}
+
+.navdiv-part1{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.navdiv-part2{
+    display: grid;
+    grid-template-columns: 40px 350px 40px;
+    grid-template-rows: 10px 40px;
+}
+
+.navdiv-row2{
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    grid-row-start: 2;
+    grid-column-start: 1;
+    grid-column-end: 4;
+}
+
+.navdiv-row-button{
+    background-color: white;
+    border-width: 0px;
+    border-radius: 10px;
+    width: 110px;
+    height: 40px;
+}
+
+.site-logo{
+    width: 375px;
+    height: 52px;
+    grid-row-start: 1;
+    grid-column-start: 2;
+}
+
+.text{
+    padding: 0%;
+    margin: 0%;
+    font-family: "Sansation";
+    font-weight: 400;
+}
