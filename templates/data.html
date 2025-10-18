@@ -6,6 +6,7 @@
     <title>Data</title>
     <link rel="stylesheet" href="/static/data.css">
     <link rel="stylesheet" href="/static/global.css">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js" charset="utf-8"></script>
 </head>
 <body>
     <div class="navdiv">
@@ -14,9 +15,9 @@
             </div>
             <div class="navdiv-part2">
                 <div class="navdiv-row2">
-                    <button class="navdiv-row-button 4">Анализ данных</button>
-                    <button class="navdiv-row-button 5">Прогноз</button>
-                    <button class="navdiv-row-button 6">API документация</button>
+                    <button class="navdiv-row-button 4"><a href="">Анализ данных</a></button>
+                    <button class="navdiv-row-button 5"><a href="">Прогноз</a></button>
+                    <button class="navdiv-row-button 6"><a href="">API документация</a></button>
                 </div>
             </div>
     </div>
@@ -28,31 +29,74 @@
 
         </div>
             <div id="head-1">
-                <p class="text head2-text">Да что угодно вообще</p>
+                <p class="text head2-text">Зависимость согласия от наценки</p>
             </div>
             <div id="paragraph-1">
-
+                <p class="text parag-text">
+                    Золотая середина находится в диапазоне 20-40% наценки. Наценка более 50% становится критической - шансы получить заказ резко падают. Оптимальная стратегия: не максимизировать цену, а находить баланс между ценой и вероятностью
+                </p>
             </div>
         <div id="div-for-graph">
             <div id="graph-2">
-                
+
             </div>
             <div id="head-2">
-                <p class="text head2-text">Да что угодно вообще</p>
+                <p class="text head2-text">Готовность платить по времени</p>
             </div>
             <div id="paragraph-2">
-
+                <p class="text parag-text">
+                    Ночью пассажиры значительно более сговорчивы (+87% по сравнению с утром). Утром пассажиры наиболее чувствительны к цене. Динамическое ценообразование должно учитывать время суток
+                </p>
             </div>
         </div>
             <div id="head-3" >
-                <p class="text head2-text">Да что угодно вообще</p>
+                <p class="text head2-text">Влияние цены на наценку</p>
             </div>
             <div id="paragraph-3">
-
+                <p class="text parag-text">
+                    На дешевые поездки (до 200₽) пассажиры не готовы к большим наценкам. На дорогие поездки (от 400₽) можно смелее предлагать +30-35%. Эффект масштаба: чем дороже поездка, тем менее чувствителен пассажир к процентам
+                </p>
             </div>
         <div id="graph-3">
             
         </div>
     </main>
+    <script>
+                // Ждем загрузки DOM
+                document.addEventListener('DOMContentLoaded', function() {
+                    
+                    // График 1
+                    Plotly.newPlot('graph-1', [{
+                        x: [10, 20, 30, 40, 50, 60, 70, 80],
+                        y: [85, 72, 58, 45, 32, 19, 12, 8],
+                        type: 'scatter',
+                        mode: 'lines+markers'
+                    }], {
+                        autosize: true,
+                        margin: { t: 30, r: 30, b: 50, l: 50 }
+                    });
+
+                    // График 2
+                    Plotly.newPlot('graph-2', [{
+                        x: ['Утро', 'День', 'Вечер', 'Ночь'],
+                        y: [15, 22, 28, 42],
+                        type: 'bar'
+                    }], {
+                        autosize: true,
+                        margin: { t: 30, r: 30, b: 50, l: 50 }
+                    });
+
+                    // График 3
+                    Plotly.newPlot('graph-3', [{
+                        x: [150, 200, 250, 300, 350, 400, 450, 500],
+                        y: [12, 18, 22, 25, 28, 30, 32, 35],
+                        type: 'scatter',
+                        mode: 'markers'
+                    }], {
+                        autosize: true,
+                        margin: { t: 30, r: 30, b: 50, l: 50 }
+                    });
+                });
+    </script>
 </body>
 </html>
