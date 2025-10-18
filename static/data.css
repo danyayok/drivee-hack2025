@@ -5,30 +5,10 @@
 
 #data-main{
     display: grid;
-    grid-template-columns: 20px 60px 270px 60px 20px;
-    grid-template-rows: 10px 50px 10px 220px 10px 220px 10px 220px 10px;
+    grid-template-columns: 20px 60px 70px 10px 250px 20px;
+    grid-template-rows: 20px 50px 40px 30px 10px 150px 10px 30px 10px 150px 10px 30px 10px 150px 70px;
 }
 
-#graph-1{
-    border: 1px solid #AA3ADA;
-    grid-column-start: 2;
-    grid-column-end: 5;
-    grid-row-start: 4;
-}
-
-#graph-2{
-    border: 1px solid #AA3ADA;
-    grid-column-start: 2;
-    grid-column-end: 5;
-    grid-row-start: 6;
-}
-
-#graph-3{
-    border: 1px solid #AA3ADA;
-    grid-column-start: 2;
-    grid-column-end: 5;
-    grid-row-start: 8;
-}
 
 #data-zagalovok{
     display: flex;
@@ -40,4 +20,90 @@
 
 .head-text-main{
     font-size: 36px;
+}
+
+#graph-1{
+    grid-column-start: 5;
+    grid-row-start: 6;
+    border: solid 1px #AA3ADA;
+}
+
+#div-for-graph{
+    grid-column-start: 2;
+    grid-column-end: 6;
+    grid-row-start: 8;
+    grid-row-end: 11;
+}
+
+#graph-3{
+    grid-column-start: 5;
+    grid-row-start: 14;
+    border: solid 1px #AA3ADA;
+}
+
+#div-for-graph{
+    display: grid;
+    grid-template-columns: 250px 10px 130px;
+    grid-template-rows: 30px 10px 150px;
+}
+
+#graph-2{
+    grid-column-start: 1;
+    grid-row-start: 3;
+    border: solid 1px #AA3ADA;
+}
+
+#head-1{
+    grid-column-start: 5;
+    grid-row-start: 4;
+    background-image: url("/static/images/Group-head1.svg");
+    background-size: 100%;
+    background-repeat: no-repeat;
+}
+
+#head-2{
+    grid-column-start: 1;
+    grid-row-start: 1;
+    background-image: url("/static/images/Group-head2.svg");
+    background-size: 100%;
+    background-repeat: no-repeat;
+}
+
+#head-3{
+    grid-column-start: 5;
+    grid-row-start: 12;
+    background-image: url("/static/images/Group-head3.svg");
+    background-size: 100%;
+    background-repeat: no-repeat;
+}
+
+#head-1, #head-2, #head-3{
+    display:flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#paragraph-1{
+    grid-column-start: 2;
+    grid-column-end: 4;
+    grid-row-start: 6;
+    background-color: #AA3ADA;
+}
+
+#paragraph-2{
+    grid-column-start: 3;
+    grid-row-start: 3;
+    background-color: #AA3ADA;
+}
+
+#paragraph-3{
+    grid-column-start: 2;
+    grid-column-end: 4;
+    grid-row-start: 14;
+    background-color: #AA3ADA;
+}
+
+.head2-text{
+    font-size: 18px;
+    color: white;
 }
