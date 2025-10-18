@@ -202,7 +202,6 @@ http://localhost:8000/api/v1/stats
 ## 📞 Контакты
 
 **Команда KYSS** 🚀
-- Техническая поддержка: dev@kyss-team.ru
-- Бизнес-вопросы: partner@kyss-team.ru
+- Техническая поддержка: maslov.daniil.yo@gmail.com
 
 **Drivee - двигаем рынок такси в будущее!** 💎
