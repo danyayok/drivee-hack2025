@@ -379,6 +379,9 @@
     justify-content: center;
     align-items: end;
     padding: 0%;
+    background-image: url("/static/images/maps-2.png");
+    background-size: 100%;
+    background-repeat: no-repeat;
     transition: all ease 300ms;
 }
 
@@ -459,3 +462,4 @@
     grid-template-rows: 380px 380px; /* меняем фиксированную высоту на auto */
 
 }
+

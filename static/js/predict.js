@@ -23,13 +23,14 @@ function toggleMenu() {
         settingsMenu.classList.remove('collapsed');
         menuToggleBtn.classList.remove('collapsed');
 
+        menuContainer.style.backgroundImage = "url('/static/images/maps-2.png')";
         menuContainer.style.height = "380px";
     } else {
         // Скрываем меню
         settingsMenu.classList.add('collapsed');
         menuToggleBtn.classList.add('collapsed');
 
-
+        menuContainer.style.backgroundImage = "url('/static/images/maps-1.png')";
         menuContainer.style.height = "760px";
     }
 }
@@ -43,6 +44,7 @@ settingsMenu.classList.add('collapsed');
 menuToggleBtn.classList.add('collapsed');
 isMenuVisible = false;
 menuContainer.style.height = "760px";
+menuContainer.style.backgroundImage = "url('/static/images/maps-1.png')";
 
 // Переменная для хранения данных
 let priceCurve = [];
@@ -157,3 +159,5 @@ function highlightActiveButton(activeButton) {
 
 // Загружаем данные при загрузке страницы
 document.addEventListener('DOMContentLoaded', loadPriceData);
+
+
