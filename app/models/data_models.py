@@ -62,8 +62,12 @@ class OrderRequest(BaseModel):
                     if isinstance(values[field], (int, float)):
                         values[field] = datetime.fromtimestamp(values[field]).isoformat()
                     # Если это строка с timestamp
-                    elif isinstance(values[field], str) and values[field].isdigit():
-                        values[field] = datetime.fromtimestamp(int(values[field])).isoformat()
+                    elif isinstance(values[field], str) and values[field].replace('.', '').isdigit():
+                        # Защита от float и больших чисел
+                        timestamp = float(values[field])
+                        if timestamp > 1e10:  # milliseconds
+                            timestamp /= 1000
+                        values[field] = datetime.fromtimestamp(timestamp).isoformat()
                     # Если это строка в формате 'YYYY-MM-DD HH:MM:SS'
                     elif isinstance(values[field], str) and ' ' in values[field]:
                         dt = datetime.strptime(values[field], '%Y-%m-%d %H:%M:%S')
@@ -89,12 +93,11 @@ class OrderRequest(BaseModel):
 
 
 class PricePoint(BaseModel):
-    """Одна точка цены с вероятностью, доходом и распределением"""
-    price: float = Field(..., description="Цена", examples=[350.0])
-    probability: float = Field(..., ge=0, le=1, description="Вероятность принятия", examples=[0.85])
-    expected_revenue: float = Field(..., description="Ожидаемый доход", examples=[297.5])
-    service_commission: float = Field(..., description="Комиссия сервиса (12.8%)", examples=[38.08])
-    driver_earnings: float = Field(..., description="Заработок водителя", examples=[259.42])
+    price: float = Field(..., description="Цена")
+    probability_percent: float = Field(..., ge=0, le=100, description="Вероятность принятия в процентах")  # ← 0-100%
+    expected_revenue: float = Field(..., description="Ожидаемый доход")
+    service_earnings: float = Field(..., description="Комиссия сервиса")
+    driver_earnings: float = Field(..., description="Заработок водителя")
 
 
 class OptimalPricesResponse(BaseModel):

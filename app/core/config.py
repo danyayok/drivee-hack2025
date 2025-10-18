@@ -15,13 +15,13 @@ class Settings(BaseSettings):
     PORT: int = 8000
 
     # ML Model
-    MODEL_PATH: str = "models/price_acceptance_model.joblib"
-    MODEL_CACHE_SIZE: int = 1000
-    MODEL_TIMEOUT: int = 30
+    MODEL_PATH: str = os.getenv("MODEL_PATH", "/app/models/catboost_taxi_smart.joblib")
+    MODEL_CACHE_SIZE: int = 2000
+    MODEL_TIMEOUT: int = 10
 
     # Async Workers
-    THREAD_POOL_WORKERS: int = 10
-    PROCESS_POOL_WORKERS: int = 2
+    THREAD_POOL_WORKERS: int = 16
+    PROCESS_POOL_WORKERS: int = 4
     MAX_CONCURRENT_REQUESTS: int = 100
 
     # Optimization
@@ -30,11 +30,11 @@ class Settings(BaseSettings):
     MAX_PRICE_MULTIPLIER: float = 2.0
 
     # Cache
-    CACHE_TTL: int = 300  # 5 minutes
+    CACHE_TTL: int = 600  # 5 minutes
 
     # Performance
-    MAX_BATCH_SIZE: int = 100
-    REQUEST_TIMEOUT: int = 30
+    MAX_BATCH_SIZE: int = 200
+    REQUEST_TIMEOUT: int = 10
 
     @property
     def model_path(self) -> str:

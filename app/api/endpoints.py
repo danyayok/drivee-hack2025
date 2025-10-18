@@ -27,73 +27,91 @@ async def get_optimal_prices(
 ):
     try:
         start_time = time.time()
-
-        logger.info(f"🎯 Получен запрос. Водитель: {request.driver_id}, Пользователь: {request.user_id}")
-
-        # 🔥 ДОБАВЛЯЕМ ИСТОРИЧЕСКИЕ ДАННЫЕ В ЗАПРОС
         enhanced_request = request.dict()
+        base_price = request.price_start_local
 
-        # Генерируем диапазон цен
-        price_range = await _generate_price_range(request.price_start_local)
+        # 🔥 ОПТИМИЗАЦИЯ: Меньше точек, но умнее
+        price_range = np.linspace(base_price * 0.7, base_price * 2.0, 25)  # было 30-50
 
-        # Подготавливаем тестовые сценарии
-        test_scenarios = []
-        for test_price in price_range:
+        # 🔥 ОПТИМИЗАЦИЯ: Добавляем стратегические точки
+        strategic_points = [
+            base_price * 0.8, base_price * 1.0, base_price * 1.2,
+            base_price * 1.5, base_price * 1.8
+        ]
+        price_range = np.unique(np.concatenate([price_range, strategic_points]))
+
+        price_range = np.round(price_range)
+        price_range = price_range[price_range >= 50]
+
+        # Подготавливаем сценарии
+        scenarios = []
+        for price in price_range:
             scenario = enhanced_request.copy()
-            scenario['price_bid_local'] = round(test_price, 2)
-            test_scenarios.append(scenario)
+            scenario['price_bid_local'] = float(price)
+            scenarios.append(scenario)
 
-        # 🔥 ПРЕДСКАЗАНИЕ С ИСТОРИЧЕСКИМИ ДАННЫМИ
-        logger.info(f"🔍 Тестируем {len(test_scenarios)} цен с историческими данными...")
-        prediction_results = await predictor.predict_batch(test_scenarios)
+        # 🔥 ОПТИМИЗАЦИЯ: Используем более крупные батчи
+        predictions = await predictor.predict_batch(scenarios)
 
-        # Анализируем результаты с финансовыми расчетами
+        # Существующая логика фильтрации (которая работает хорошо)
         results = []
-        for test_price, pred_result in zip(price_range, prediction_results):
-            expected_revenue = test_price * pred_result.probability
-            service_commission = expected_revenue * SERVICE_COMMISSION_RATE
-            driver_earnings = expected_revenue - service_commission
+        for price, pred in zip(price_range, predictions):
+            prob = pred.probability
+            if (0.3 <= prob <= 0.85 and
+                    base_price * 0.7 <= price <= base_price * 1.8):
 
-            results.append({
-                'price': round(test_price, 2),
-                'probability': round(pred_result.probability, 3),
-                'expected_revenue': round(expected_revenue, 2),
-                'service_commission': round(service_commission, 2),
-                'driver_earnings': round(driver_earnings, 2)
-            })
+                    expected_revenue = price * prob
+                    service_commission = expected_revenue * SERVICE_COMMISSION_RATE
+                    driver_earnings = expected_revenue - service_commission
 
-        # Сортируем по ожидаемому доходу и берем топ-5
-        top_prices = sorted(results, key=lambda x: x['expected_revenue'], reverse=True)[:5]
+                    # 🔥 ДОБАВЛЯЕМ ВЕС ДЛЯ БАЛАНСА
+                    balance_score = prob * (1 - abs(price / base_price - 1.2))  # Предпочтение +20% к базовой цене
 
-        # Добавляем стратегические варианты
-        strategic_prices = _select_strategic_prices(results)
+                    results.append({
+                        'price': float(price),
+                        'probability': round(prob, 3),
+                        'probability_percent': round(prob * 100, 1),
+                        'expected_revenue': round(expected_revenue, 2),
+                        'service_earnings': round(service_commission, 2),
+                        'driver_earnings': round(driver_earnings, 2),
+                        'balance_score': balance_score  # Для сортировки
+                    })
 
-        # Объединяем и убираем дубликаты
-        final_prices = _merge_price_suggestions(top_prices, strategic_prices)
+        # 🔥 УЛУЧШЕННАЯ СТРАТЕГИЯ ОТБОРА
+        if results:
+            # 1. Топ по балансу (цена + вероятность)
+            results_sorted = sorted(results, key=lambda x: x['balance_score'], reverse=True)
 
-        # Дополнительный анализ с финансовыми метриками
-        analysis = _analyze_results(final_prices, request.price_start_local)
+            # 2. Берем разнообразные варианты
+            final_results = []
+            price_buckets = set()
 
-        processing_time = time.time() - start_time
+            for result in results_sorted:
+                price_bucket = round(result['price'] / 25) * 25  # Группируем по 25 руб
+                if price_bucket not in price_buckets and len(final_results) < 8:
+                    final_results.append(result)
+                    price_buckets.add(price_bucket)
 
-        logger.info(f"✅ Сгенерировано {len(final_prices)} ценовых предложений. "
-                    f"Время: {processing_time:.3f}s")
+            # Удаляем временное поле
+            for result in final_results:
+                result.pop('balance_score', None)
+        else:
+            final_results = []
+
+        processing_time = round((time.time() - start_time) * 1000, 2)
 
         return OptimalPricesResponse(
-            price_curve=final_prices,
-            processing_time_ms=round(processing_time * 1000, 2),
-            analysis=analysis
+            price_curve=final_results,
+            processing_time_ms=processing_time,
+            analysis={
+                "total_options": len(final_results),
+                "max_revenue_option": final_results[0] if final_results else None
+            }
         )
 
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"❌ Ошибка генерации цен: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail=f"Ошибка генерации оптимальных цен: {str(e)}"
-        )
-
+        raise HTTPException(status_code=500, detail=f"Ошибка генерации оптимальных цен: {str(e)}")
 
 @router.get("/health", response_model=HealthResponse)
 async def health_check(
@@ -114,6 +132,8 @@ async def health_check(
         avg_processing_time=stats["avg_processing_time"],
         uptime_seconds=round(uptime, 2)
     )
+
+
 
 
 @router.get("/stats", response_model=ServiceStats)
@@ -174,128 +194,6 @@ async def get_service_stats(
 # =============================================================================
 # ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 # =============================================================================
-
-async def _generate_price_range(start_price: float) -> np.ndarray:
-    """Генерация диапазона цен для тестирования"""
-    # Тестируем цены от -30% до +100% от базовой
-    min_price = start_price * 0.7
-    max_price = start_price * 2.0
-    steps = 50  # Количество точек для тестирования
-
-    # ВАЖНО: используем нормальные цены, а не копейки!
-    price_range = np.linspace(min_price, max_price, steps)
-
-    # Округляем до рублей
-    price_range = np.round(price_range)
-
-    # Убираем дубликаты после округления
-    price_range = np.unique(price_range)
-
-    # Фильтруем слишком низкие цены (минимально 50 руб)
-    price_range = price_range[price_range >= 50]
-
-    logger.info(f"💰 Генерируем цены от {min_price:.0f} до {max_price:.0f} руб, шагов: {len(price_range)}")
-
-    return price_range
-
-
-def _select_strategic_prices(results: List[Dict]) -> List[Dict]:
-    """Выбор стратегически важных цен"""
-    strategic = []
-
-    if not results:
-        return strategic
-
-    # 1. Цена с максимальной вероятностью принятия
-    max_prob = max(results, key=lambda x: x['probability'])
-    strategic.append(max_prob)
-
-    # 2. Баланс цены и вероятности (ближайшая к 70% вероятности)
-    balanced = min(results, key=lambda x: abs(x['probability'] - 0.7))
-    strategic.append(balanced)
-
-    # 3. Агрессивная цена (высокая цена, приемлемая вероятность)
-    high_price_candidates = [r for r in results if r['probability'] > 0.4]
-    if high_price_candidates:
-        aggressive = max(high_price_candidates, key=lambda x: x['price'])
-        strategic.append(aggressive)
-
-    return strategic
-
-
-def _merge_price_suggestions(top_prices: List[Dict], strategic_prices: List[Dict]) -> List[Dict]:
-    """Объединение и дедупликация ценовых предложений"""
-    merged = []
-    seen_prices = set()
-
-    # Добавляем топ цены по доходу
-    for price in top_prices:
-        price_key = price['price']
-        if price_key not in seen_prices:
-            merged.append(price)
-            seen_prices.add(price_key)
-
-    # Добавляем стратегические цены
-    for price in strategic_prices:
-        price_key = price['price']
-        if price_key not in seen_prices and len(merged) < 8:  # Максимум 8 предложений
-            merged.append(price)
-            seen_prices.add(price_key)
-
-    # Сортируем по цене для удобства восприятия
-    return sorted(merged, key=lambda x: x['price'])
-
-
-def _analyze_results(results: List[Dict], start_price: float) -> Dict[str, Any]:
-    """Анализ результатов с финансовыми метриками"""
-    if not results:
-        return {"error": "Нет данных для анализа"}
-    max_revenue_price = max(results, key=lambda x: x['expected_revenue'])
-    max_probability_price = max(results, key=lambda x: x['probability'])
-    max_driver_earnings = max(results, key=lambda x: x['driver_earnings'])
-
-    # Финансовый анализ
-    total_potential_revenue = sum(p['expected_revenue'] for p in results)
-    avg_service_commission = np.mean([p['service_commission'] for p in results])
-    avg_driver_earnings = np.mean([p['driver_earnings'] for p in results])
-
-    # Рекомендации
-    recommendations = []
-
-    if max_revenue_price['probability'] > 0.7:
-        rec = f"Рекомендуем {max_revenue_price['price']}₽: макс. доход {max_revenue_price['expected_revenue']}₽"
-        rec += f" (сервис: {max_revenue_price['service_commission']}₽, водитель: {max_revenue_price['driver_earnings']}₽)"
-        recommendations.append(rec)
-    else:
-        balanced = min(results, key=lambda x: abs(x['probability'] - 0.7))
-        rec = f"Баланс: {balanced['price']}₽ с вероятностью {balanced['probability'] * 100}%"
-        rec += f" (сервис: {balanced['service_commission']}₽, водитель: {balanced['driver_earnings']}₽)"
-        recommendations.append(rec)
-
-    # Добавляем рекомендацию по заработку водителя
-    if max_driver_earnings['probability'] > 0.5:
-        rec = f"Для водителя: {max_driver_earnings['price']}₽ → заработок {max_driver_earnings['driver_earnings']}₽"
-        recommendations.append(rec)
-
-    return {
-        # Ключевые цены
-        "max_revenue_price": max_revenue_price['price'],
-        "max_revenue_probability": max_revenue_price['probability'],
-        "max_probability_price": max_probability_price['price'],
-        "max_probability": max_probability_price['probability'],
-        "max_driver_earnings_price": max_driver_earnings['price'],
-        "max_driver_earnings": max_driver_earnings['driver_earnings'],
-
-        # Финансовые метрики
-        "total_potential_revenue": round(total_potential_revenue, 2),
-        "avg_service_commission": round(avg_service_commission, 2),
-        "avg_driver_earnings": round(avg_driver_earnings, 2),
-        "service_commission_rate": f"{SERVICE_COMMISSION_RATE * 100}%",
-
-        "recommendations": recommendations,
-        "total_options": len(results)
-    }
-
 
 def _get_memory_usage() -> Dict[str, float]:
     """Получение информации об использовании памяти"""
