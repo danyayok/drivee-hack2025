@@ -1,12 +1,9 @@
-#!/usr/bin/env python3
-"""
-Точка входа для запуска приложения с обработкой ошибок
-"""
 import uvicorn
 import sys
 import os
 import signal
 import asyncio
+import platform
 
 # Добавляем корневую директорию в PYTHONPATH
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -28,16 +25,40 @@ class Application:
         logger.info(f"🛑 Получен сигнал {sig}, начинаем graceful shutdown...")
         self.shutdown_event.set()
 
+    def setup_linux_optimizations(self):
+        """Оптимизации для Linux"""
+        if platform.system() != "Windows":
+            try:
+                # Увеличиваем лимиты файлов
+                import resource
+                soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+                resource.setrlimit(resource.RLIMIT_NOFILE, (min(65536, hard), hard))
+                logger.info(f"✅ Установлен лимит файлов: {min(65536, hard)}")
+            except:
+                logger.warning("⚠️ Не удалось установить лимиты файлов")
+
     async def run(self):
         """Запуск приложения"""
         try:
             logger.info("🚀 Запускаем Price Optimizer API...")
-            logger.info(f"📊 Настройки: {settings.PROCESS_POOL_WORKERS} процессов, "
-                        f"{settings.THREAD_POOL_WORKERS} потоков")
+
+            # Оптимизации для Linux
+            self.setup_linux_optimizations()
+
+            logger.info(f"📊 Настройки: {settings.THREAD_POOL_WORKERS} потоков, "
+                        f"ProcessPool: {'включен' if settings.PROCESS_POOL_WORKERS > 0 else 'отключен'}")
 
             # Настройка обработчиков сигналов
-            signal.signal(signal.SIGINT, self.handle_shutdown)
-            signal.signal(signal.SIGTERM, self.handle_shutdown)
+            if platform.system() != "Windows":
+                signal.signal(signal.SIGTERM, self.handle_shutdown)
+                signal.signal(signal.SIGINT, self.handle_shutdown)
+            else:
+                # Windows signal handling
+                try:
+                    import win32api
+                    win32api.SetConsoleCtrlHandler(self.handle_shutdown, True)
+                except ImportError:
+                    pass
 
             # Конфигурация сервера
             config = uvicorn.Config(
@@ -48,10 +69,13 @@ class Application:
                 log_level="info",
                 access_log=settings.DEBUG,
                 workers=1,
-                timeout_keep_alive=5,
-                timeout_notify=30,
-                timeout_graceful_shutdown=30
             )
+
+            # Linux-specific optimizations
+            if platform.system() != "Windows":
+                config.timeout_keep_alive = 5
+                config.timeout_notify = 30
+                config.timeout_graceful_shutdown = 30
 
             server = uvicorn.Server(config)
 

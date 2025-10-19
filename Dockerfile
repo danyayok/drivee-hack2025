@@ -1,36 +1,45 @@
-FROM python:3.9-slim
+FROM python:3.11-slim
 
-WORKDIR /app
-
-# Устанавливаем системные зависимости
+# Установка системных зависимостей
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
-    curl \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+    && rm -rf /var/lib/apt/lists/*
 
-# Копируем requirements и устанавливаем зависимости
+# Создание пользователя для безопасности
+RUN groupadd -r app && useradd -r -g app app
+
+# Создание директорий
+RUN mkdir -p /app/models /app/data /var/log/price-optimizer
+RUN chown -R app:app /app /var/log/price-optimizer
+
+WORKDIR /app
+
+# Копирование requirements и установка зависимостей
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Копируем код приложения
+# Копирование приложения
 COPY . .
 
-# Создаем необходимые директории
-RUN mkdir -p models logs
+# Права доступа
+RUN chown -R app:app /app
+USER app
 
-# Создаем не-root пользователя для безопасности
-RUN groupadd -r appuser && useradd -r -g appuser appuser
-RUN chown -R appuser:appuser /app
-USER appuser
+# Создание симлинков для Linux
+RUN ln -sf /dev/stdout /var/log/price-optimizer/app.log
 
-# Expose порт
+# Переменные окружения для Linux
+ENV MODEL_PATH=/app/models/catboost_taxi_smart.joblib
+ENV DATA_PATH=/app/data/train.csv
+ENV LOG_DIR=/var/log/price-optimizer
+ENV PROCESS_POOL_WORKERS=0
+ENV THREAD_POOL_WORKERS=16
+
 EXPOSE 8000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/live || exit 1
 
-# Запускаем приложение
 CMD ["python", "run.py"]

@@ -1,41 +1,27 @@
 version: '3.8'
 
 services:
-  taxi-optimizer:
+  price-optimizer:
     build: .
     ports:
       - "8000:8000"
     environment:
       - DEBUG=false
-      - MODEL_PATH=/app/models/taxi_model.joblib
-      - PROCESS_POOL_WORKERS=2
-      - THREAD_POOL_WORKERS=4
+      - MODEL_PATH=/app/models/catboost_taxi_smart.joblib
+      - DATA_PATH=/app/data/train.csv
+      - LOG_DIR=/var/log/price-optimizer
+      - PROCESS_POOL_WORKERS=0
+      - THREAD_POOL_WORKERS=16
     volumes:
       - ./models:/app/models
-      - ./logs:/app/logs
+      - ./data:/app/data
+      - logs:/var/log/price-optimizer
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/live"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
-  # Тестовый сервис для демонстрации
-  taxi-optimizer-test:
-    build: .
-    ports:
-      - "8001:8000"
-    environment:
-      - DEBUG=true
-      - MODEL_PATH=/app/models/taxi_model.joblib
-    volumes:
-      - ./models:/app/models
-      - ./logs:/app/logs
-    command: ["python", "run.py"]
-    profiles: ["test"]
+volumes:
+  logs:

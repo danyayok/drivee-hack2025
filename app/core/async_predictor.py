@@ -3,12 +3,13 @@ import time
 import pandas as pd
 import numpy as np
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional
 import joblib
 import hashlib
 import json
 from dataclasses import dataclass
 from catboost import Pool
+import platform
 import os
 import signal
 import threading
@@ -28,19 +29,54 @@ class PredictionResult:
 
 
 def init_worker():
-    """Инициализация воркера процесса - игнорируем SIGINT в дочерних процессах"""
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    """Инициализация воркера процесса - только для Windows"""
+    if platform.system() == "Windows":
+        try:
+            signal.signal(signal.SIGINT, signal.SIG_IGN)
+        except:
+            pass  # Игнорируем ошибки сигналов
 
 
 class HistoricalDataService:
-    def __init__(self, data_path: str = "train.csv"):
-        self.data_path = data_path
+    def __init__(self, data_path: str = None):
+        # ✅ КРОССПЛАТФОРМЕННЫЙ ПУТЬ К ДАННЫМ
+        self.data_path = data_path or settings.DATA_PATH
         self.df = pd.DataFrame()
         self.driver_stats = {}
         self.user_stats = {}
         self.avg_response_delay = 5.0
+
+        # ✅ ПРОВЕРКА СУЩЕСТВОВАНИЯ ФАЙЛА ДЛЯ LINUX
+        if not os.path.exists(self.data_path):
+            logger.warning(f"⚠️ Файл данных не найден: {self.data_path}")
+            # Пробуем найти в текущей директории для Linux
+            fallback_path = "train.csv"
+            if os.path.exists(fallback_path):
+                self.data_path = fallback_path
+                logger.info(f"✅ Используем fallback путь: {fallback_path}")
+            else:
+                logger.warning("⚠️ Файл train.csv не найден, используем пустые данные")
+                return
+
         self._load_data()
 
+    def _get_fallback_driver_stats(self):
+        """Fallback статистика для водителя"""
+        return {
+            'driver_acceptance_rate': 0.35,
+            'driver_total_orders': 0,
+            'driver_avg_rating': 4.0,
+            'driver_avg_bid_price': 200.0
+        }
+
+    def _get_fallback_user_stats(self):
+        """Fallback статистика для пользователя"""
+        return {
+            'user_acceptance_rate': 0.4,
+            'user_total_orders': 0,
+            'user_avg_rating': 4.5,
+            'user_avg_bid_price': 200.0
+        }
 
     def get_driver_stats(self, driver_id) -> Dict:
         """Универсальный поиск с исправленными типами"""
@@ -91,24 +127,6 @@ class HistoricalDataService:
 
         logger.warning(f"⚠️ Данные для пользователя {user_id_int} не найдены, используем fallback")
         return self._get_fallback_user_stats()
-
-    def _get_fallback_driver_stats(self):
-        """Fallback статистика для водителя"""
-        return {
-            'driver_acceptance_rate': 0.35,
-            'driver_total_orders': 0,
-            'driver_avg_rating': 4.0,
-            'driver_avg_bid_price': 200.0
-        }
-
-    def _get_fallback_user_stats(self):
-        """Fallback статистика для пользователя"""
-        return {
-            'user_acceptance_rate': 0.4,
-            'user_total_orders': 0,
-            'user_avg_rating': 4.5,
-            'user_avg_bid_price': 200.0
-        }
 
     def _load_data(self):
         try:
@@ -201,6 +219,7 @@ class HistoricalDataService:
             logger.error(f"❌ Ошибка расчета статистик: {e}")
             self.driver_stats = {}
             self.user_stats = {}
+
     def get_combined_stats(self, driver_id, user_id) -> Dict:
         """ИСПРАВЛЕННАЯ версия"""
         driver_stats = self.get_driver_stats(driver_id)
@@ -221,7 +240,7 @@ historical_service = HistoricalDataService()
 
 class ModelLoader:
     _models = {}
-        
+
     @classmethod
     def load_model(cls, model_path: str):
         if model_path in cls._models:
@@ -229,6 +248,11 @@ class ModelLoader:
 
         try:
             logger.info(f"🔄 Загружаем CatBoost модель в процессе {os.getpid()}")
+
+            # ✅ ПРОВЕРКА СУЩЕСТВОВАНИЯ ФАЙЛА ДЛЯ LINUX
+            if not os.path.exists(model_path):
+                raise FileNotFoundError(f"Файл модели не найден: {model_path}")
+
             model_data = joblib.load(model_path)
 
             if isinstance(model_data, dict) and 'model' in model_data:
@@ -308,7 +332,6 @@ def prepare_features_sync(features: Dict) -> pd.DataFrame:
     df["pickup_in_seconds"] = features.get('pickup_in_seconds', 120)
     df["pickup_speed_kmh"] = (df["pickup_in_meters"] / 1000) / (df["pickup_in_seconds"] / 3600 + 1e-6)
 
-    # 🔥 САМЫЕ ВАЖНЫЕ ФИЧИ - исторические данные
     driver_id = features.get('driver_id')
     user_id = features.get('user_id')
 
@@ -358,13 +381,11 @@ def prepare_features_sync(features: Dict) -> pd.DataFrame:
     df["price_start_local"] = price_start
     df["price_bid_local"] = price_bid
 
-    # 🔥 КРИТИЧЕСКИ ВАЖНО: user_rating должен быть!
     df["user_rating"] = features.get('user_rating', 4.6)
 
     return df
 
 
-# В async_predictor.py - добавьте отладочную информацию
 def predict_batch_sync(model_path: str, features_list: List[Dict]) -> np.ndarray:
     start_time = time.time()
     try:
@@ -460,7 +481,8 @@ class CacheWithTTL:
         with self._lock:
             total = self._hits + self._misses
             hit_rate = self._hits / total if total else 0
-            return {'size': len(self._cache), 'hits': self._hits, 'misses': self._misses, 'hit_rate': round(hit_rate, 3),
+            return {'size': len(self._cache), 'hits': self._hits, 'misses': self._misses,
+                    'hit_rate': round(hit_rate, 3),
                     'max_size': self.max_size, 'ttl': self.ttl}
 
 
@@ -468,33 +490,65 @@ class AsyncMLPredictor:
     """Асинхронный ML сервис с историческими данными"""
 
     def __init__(self, model_path: str = settings.MODEL_PATH):
-        self.model_path = os.path.abspath(model_path)
+        self.model_path = settings.model_path  # ✅ Используем property из config
         self.model_loaded = False
         self.model = None
         self.feature_names = None
         self.historical_service = historical_service
-        self.process_pool = ProcessPoolExecutor(max_workers=settings.PROCESS_POOL_WORKERS, initializer=init_worker)
+
+        # ✅ КРОСС-ПЛАТФОРМЕННЫЕ ПУЛЫ
+        if platform.system() == "Windows" and settings.PROCESS_POOL_WORKERS > 0:
+            self.process_pool = ProcessPoolExecutor(
+                max_workers=settings.PROCESS_POOL_WORKERS,
+                initializer=init_worker
+            )
+            logger.info(f"🔧 ProcessPool создан для Windows: {settings.PROCESS_POOL_WORKERS} workers")
+        else:
+            self.process_pool = None
+            logger.info("🔧 ProcessPool отключен для Linux")
+
         self.thread_pool = ThreadPoolExecutor(max_workers=settings.THREAD_POOL_WORKERS)
         self.cache = CacheWithTTL(max_size=settings.MODEL_CACHE_SIZE, ttl=settings.CACHE_TTL)
         self.metrics = {'total_predictions': 0, 'total_processing_time': 0.0, 'errors': 0, 'batch_sizes': []}
         self.start_time = time.time()
-        logger.info(f"🚀 AsyncMLPredictor инициализирован")
+        logger.info(f"🚀 AsyncMLPredictor инициализирован для {platform.system()}")
 
     async def initialize(self):
-        """Инициализация модели без обязательного feature_names"""
+        """Инициализация модели"""
         try:
+            # ✅ ПРОВЕРКА СУЩЕСТВОВАНИЯ МОДЕЛИ ДЛЯ LINUX
             if not os.path.exists(self.model_path):
-                raise FileNotFoundError(f"Файл модели не найден: {self.model_path}")
+                # Пробуем найти модель в альтернативных путях для Linux
+                if platform.system() != "Windows":
+                    alternative_paths = [
+                        "models/catboost_taxi_smart.joblib",
+                        "./catboost_taxi_smart.joblib",
+                        "/app/models/catboost_taxi_smart.joblib"
+                    ]
+
+                    for alt_path in alternative_paths:
+                        if os.path.exists(alt_path):
+                            self.model_path = alt_path
+                            logger.info(f"✅ Найдена модель по альтернативному пути: {alt_path}")
+                            break
+                    else:
+                        raise FileNotFoundError(f"Файл модели не найден: {self.model_path}")
+                else:
+                    raise FileNotFoundError(f"Файл модели не найден: {self.model_path}")
+
             loop = asyncio.get_event_loop()
             model_data = await loop.run_in_executor(self.thread_pool, joblib.load, self.model_path)
+
             if isinstance(model_data, dict) and 'model' in model_data:
                 self.model = model_data['model']
                 self.feature_names = model_data.get('feature_names', None)
             else:
                 self.model = model_data
                 self.feature_names = None
+
             self.model_loaded = True
-            logger.info(f"✅ Модель загружена: {self.model}, фичи: {self.feature_names}")
+            logger.info(f"✅ Модель загружена: {self.model_path}")
+
         except Exception as e:
             logger.error(f"❌ Ошибка инициализации модели: {e}")
             self.model_loaded = False
@@ -513,19 +567,28 @@ class AsyncMLPredictor:
 
         try:
             loop = asyncio.get_event_loop()
-            probabilities = await asyncio.wait_for(
-                loop.run_in_executor(self.process_pool, predict_batch_sync, self.model_path, features_list),
-                timeout=settings.MODEL_TIMEOUT
-            )
+
+            # ✅ ВСЕГДА ИСПОЛЬЗУЕМ THREADPOOL НА LINUX
+            if self.process_pool and platform.system() == "Windows":
+                probabilities = await loop.run_in_executor(
+                    self.process_pool, predict_batch_sync, self.model_path, features_list
+                )
+            else:
+                probabilities = await loop.run_in_executor(
+                    self.thread_pool, predict_batch_sync, self.model_path, features_list
+                )
+
             processing_time = time.time() - start_time
             self.cache.set(cache_key, probabilities.tolist())
             self._update_metrics(processing_time, len(features_list))
             return [PredictionResult(float(prob), processing_time / len(features_list)) for prob in probabilities]
+
         except asyncio.TimeoutError:
             self.metrics['errors'] += 1
             return [PredictionResult(0.5, time.time() - start_time, error="Prediction timeout") for _ in features_list]
         except Exception as e:
             self.metrics['errors'] += 1
+            logger.error(f"❌ Ошибка предсказания: {e}")
             return [PredictionResult(0.5, time.time() - start_time, error=str(e)) for _ in features_list]
 
     async def predict_single(self, features: Dict) -> PredictionResult:
@@ -585,9 +648,11 @@ class AsyncMLPredictor:
         logger.info("🛑 Завершаем работу AsyncMLPredictor...")
         self.cache._cleanup_expired()
         try:
-            self.process_pool.shutdown(wait=True)
+            if self.process_pool:
+                self.process_pool.shutdown(wait=True)
+                logger.info("✅ ProcessPool завершен")
             self.thread_pool.shutdown(wait=True)
-            logger.info("✅ ProcessPool и ThreadPool завершены")
+            logger.info("✅ ThreadPool завершен")
         except Exception as e:
             logger.warning(f"⚠️ Ошибка при завершении пулов: {e}")
         logger.info("✅ AsyncMLPredictor остановлен")
