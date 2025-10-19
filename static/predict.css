@@ -305,9 +305,7 @@
     padding: 0%;
     margin: 0%;
     grid-row-start: 4;
-    background-image: url("/static/images/button-back.png");
-    background-size: 100%;
-    background-repeat: no-repeat;
+    background-color: white;
     width: 160px;
     height: 40px;
 }
@@ -315,11 +313,26 @@
 #button{
     padding: 0%;
     margin: 0%;
-    width: 150px;
-    height: 30px;
+    width: 160px;
+    height: 40px;
     border-radius: 10px;
     border: none;
+    background-image: url("/static/images/price-pred-2.svg");
+    background-size: 100%;
+    background-repeat: no-repeat;
     background-color: white;
+    transition: all 0.2s ease;
+}
+
+#button:hover{
+    cursor: pointer;
+}
+
+#button:active{
+    cursor: pointer;
+    background-image: url("/static/images/price-pred-1.svg");
+    background-size: 100%;
+    background-repeat: no-repeat;
 }
 
 #card1{
@@ -361,15 +374,6 @@
     box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.5) inset;
     
 }
-
-
-
-
-
-
-
-
-
 
 /* Стили для кнопки управления меню */
 #menu-toggle-container {
