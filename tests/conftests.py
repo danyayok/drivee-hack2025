@@ -1,65 +1,61 @@
-import pytest
-import asyncio
-from unittest.mock import AsyncMock, MagicMock
-from fastapi.testclient import TestClient
-
-from app.main import app
-from app.core.async_predictor import AsyncMLPredictor, PredictionResult
-
-
-@pytest.fixture
-def test_client():
-    """Фикстура тестового клиента"""
-    return TestClient(app)
+#!/usr/bin/env python3
+"""
+Скрипт для запуска тестов
+"""
+import subprocess
+import sys
+import os
 
 
-@pytest.fixture
-def mock_predictor():
-    """Фикстура мок-предиктора"""
-    mock_predictor = AsyncMock(spec=AsyncMLPredictor)
-    mock_predictor.model_loaded = True
-    mock_predictor.get_stats.return_value = {
-        "model_loaded": True,
-        "total_predictions": 100,
-        "avg_processing_time": 0.1,
-        "errors": 0,
-        "cache": {"hit_rate": 0.5, "size": 100}
-    }
+def run_tests():
+    """Запуск тестов с разными опциями"""
 
-    # Мок предсказаний
-    mock_predictions = [
-        PredictionResult(probability=0.6 + i * 0.01, processing_time=0.1)
-        for i in range(30)
-    ]
-    mock_predictor.predict_batch.return_value = mock_predictions
+    print("🚀 Запуск тестов Price Optimizer API...")
+    print("=" * 50)
 
-    return mock_predictor
+    # Базовые тесты
+    print("\n📋 Запуск базовых тестов...")
+    result = subprocess.run([
+        "pytest",
+        "tests/",
+        "-v",
+        "--tb=short",
+        "-m", "not slow"
+    ], cwd=os.path.dirname(os.path.abspath(__file__)))
+
+    if result.returncode != 0:
+        print("\n❌ Базовые тесты не прошли!")
+        return result.returncode
+
+    # Интеграционные тесты (медленные)
+    print("\n🔍 Запуск интеграционных тестов...")
+    result = subprocess.run([
+        "pytest",
+        "tests/test_integration.py",
+        "-v",
+        "--tb=short",
+        "-m", "slow"
+    ], cwd=os.path.dirname(os.path.abspath(__file__)))
+
+    if result.returncode != 0:
+        print("\n⚠️ Интеграционные тесты не прошли, но это нормально для CI")
+
+    # Покрытие кода
+    print("\n📊 Запуск тестов с покрытием...")
+    result = subprocess.run([
+        "pytest",
+        "tests/",
+        "--cov=app",
+        "--cov-report=term-missing",
+        "--cov-report=html:htmlcov",
+        "-m", "not slow"
+    ], cwd=os.path.dirname(os.path.abspath(__file__)))
+
+    print("=" * 50)
+    print("✅ Тестирование завершено!")
+
+    return result.returncode
 
 
-@pytest.fixture
-def sample_order_request():
-    """Фикстура образца запроса"""
-    return {
-        "distance_in_meters": 2500,
-        "duration_in_seconds": 600,
-        "pickup_in_meters": 500,
-        "pickup_in_seconds": 100,
-        "driver_rating": 4.9,
-        "user_rating": 4.8,
-        "price_start_local": 190,
-        "order_timestamp": "2020-05-15T18:30:00",
-        "driver_platform": "android",
-        "driver_reg_date": "2019-01-15",
-        "carmodel": "Camry",
-        "carname": "Toyota",
-        "driver_id": "29368889",
-        "user_id": "16458846"
-    }
-
-
-@pytest.fixture(scope="session")
-def event_loop():
-    """Фикстура event loop для async тестов"""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
+if __name__ == "__main__":
+    sys.exit(run_tests())

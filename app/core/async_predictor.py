@@ -39,7 +39,8 @@ class HistoricalDataService:
         self.driver_stats = {}
         self.user_stats = {}
         self.avg_response_delay = 5.0
-        self._load_data()  # 🔥 ВКЛЮЧИТЕ ЭТУ СТРОЧКУ!
+        self._load_data()
+
 
     def get_driver_stats(self, driver_id) -> Dict:
         """Универсальный поиск с исправленными типами"""
@@ -91,7 +92,17 @@ class HistoricalDataService:
         logger.warning(f"⚠️ Данные для пользователя {user_id_int} не найдены, используем fallback")
         return self._get_fallback_user_stats()
 
+    def _get_fallback_driver_stats(self):
+        """Fallback статистика для водителя"""
+        return {
+            'driver_acceptance_rate': 0.35,
+            'driver_total_orders': 0,
+            'driver_avg_rating': 4.0,
+            'driver_avg_bid_price': 200.0
+        }
+
     def _get_fallback_user_stats(self):
+        """Fallback статистика для пользователя"""
         return {
             'user_acceptance_rate': 0.4,
             'user_total_orders': 0,

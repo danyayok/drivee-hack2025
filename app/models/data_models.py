@@ -135,10 +135,21 @@ class ServiceStats(BaseModel):
     total_driver_earnings: float = Field(..., description="Общий заработок водителей")
     total_commission: float = Field(..., description="Общая комиссия сервиса")
 
+    # 🔥 НОВЫЕ ПОЛЯ - финансовая статистика
+    today_service_revenue: float = Field(..., description="Выручка сервиса за сегодня")
+    today_driver_earnings: float = Field(..., description="Заработок водителей за сегодня")
+    today_orders: int = Field(..., description="Заказов за сегодня")
+    avg_order_value: float = Field(..., description="Средний чек")
+
     # Активность по водителям
     active_drivers: int = Field(..., description="Активные водители")
+    total_drivers: int = Field(..., description="Всего водителей в системе")  # 🔥 НОВОЕ ПОЛЕ
     top_drivers: List[Dict[str, Any]] = Field(..., description="Топ водители по заработку")
 
+    # 🔥 НОВЫЕ ПОЛЯ - статистика в реальном времени
+    current_hour_orders: int = Field(..., description="Заказов за последний час")
+    avg_order_completion_time: float = Field(..., description="Среднее время выполнения заказа (мин)")
+    popular_routes: List[Dict[str, Any]] = Field(..., description="Популярные маршруты")
 
 class DriverEarnings(BaseModel):
     """Заработок водителя"""

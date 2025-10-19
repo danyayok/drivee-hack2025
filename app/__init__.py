@@ -1,5 +1,5 @@
 """
-Taxi Price Optimizer API
+Driveechok
 Асинхронный ML микросервис для оптимизации цен такси
 """
 
