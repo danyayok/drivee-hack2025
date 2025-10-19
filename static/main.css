@@ -1,32 +1,22 @@
 #main-main{
     display: grid;
-    grid-template-columns: 30px 50px 270px 50px 30px;
-    grid-template-rows: 60px 50px 410px 190px;
-}
-
-#zagalovok-ebana-naxuy-epta{
-    grid-column-start: 3;
-    grid-row-start: 2;
-}
-
-#zagalovok-ebana-naxuy-epta{
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    grid-template-columns: 30px 370px 30px;
+    grid-template-rows: 20px 720px 20px;
 }
 
 .main-div{
     grid-column-start: 2;
-    grid-row-start: 3;
-    grid-column-end: 5;
+    grid-row-start: 2;
 }
 
 .main-div{
-    display: flex;
-    border: 1px solid #AA3ADA;
+    border: none;
     border-radius: 20px;
-    padding: 10px;
-    box-sizing: border-box
+    padding: 0%;
+    box-sizing: border-box;
+    background-image: url("/static/images/main-label.svg");
+    background-size: 100%;
+    background-repeat: no-repeat;
 }
 
 .paragraph-text-main{
