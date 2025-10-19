@@ -1,122 +1,51 @@
-// Элементы DOM
-const rangeInput = document.getElementById('rang');
+// predict.js
+
+// DOM элементы
 const priceElement = document.getElementById('price-itog').querySelector('.price-text');
 const probabilityElement = document.getElementById('ver');
 const revenueElement = document.getElementById('inc');
-const buttonCardSafe = document.getElementById('card1');
-const buttonCardMean = document.getElementById('card2');
-const buttonCardRisk = document.getElementById('card3');
-
-// Элементы для управления меню
-const menuContainer = document.getElementById("menu-toggle-container");
+const buttonSafe = document.getElementById('card1');
+const buttonMean = document.getElementById('card2');
+const buttonRisk = document.getElementById('card3');
 const menuToggleBtn = document.getElementById('menu-toggle-btn');
 const settingsMenu = document.getElementById('settings');
-let isMenuVisible = true;
+const menuContainer = document.getElementById('menu-toggle-container');
+const rangeInput = document.getElementById('rang');
 
-// Захардкоженные примеры данных для отправки
-const orderExamples = [
-    {
-        "distance_in_meters": 3500.0,
-        "duration_in_seconds": 600.0,
-        "pickup_in_meters": 500.0,
-        "pickup_in_seconds": 120.0,
-        "driver_rating": 4.8,
-        "user_rating": 4.9,
-        "price_start_local": 200.0,
-        "order_timestamp": "2024-01-15T12:00:00",
-        "driver_platform": "android",
-        "driver_reg_date": "2023-01-01",
-        "carname": "Toyota",
-        "carmodel": "Camry",
-        "driver_id": "29368889",
-        "user_id": "16458846"
-    },
-    {
-        "distance_in_meters": 2800.0,
-        "duration_in_seconds": 480.0,
-        "pickup_in_meters": 300.0,
-        "pickup_in_seconds": 90.0,
-        "driver_rating": 4.9,
-        "user_rating": 4.7,
-        "price_start_local": 180.0,
-        "order_timestamp": "2024-01-15T14:30:00",
-        "driver_platform": "ios",
-        "driver_reg_date": "2023-03-15",
-        "carname": "Honda",
-        "carmodel": "Civic",
-        "driver_id": "29368889",
-        "user_id": "16458846"
-    },
-    {
-        "distance_in_meters": 4200.0,
-        "duration_in_seconds": 720.0,
-        "pickup_in_meters": 600.0,
-        "pickup_in_seconds": 150.0,
-        "driver_rating": 4.7,
-        "user_rating": 4.8,
-        "price_start_local": 250.0,
-        "order_timestamp": "2024-01-15T16:45:00",
-        "driver_platform": "android",
-        "driver_reg_date": "2023-02-20",
-        "carname": "Hyundai",
-        "carmodel": "Solaris",
-        "driver_id": "29368889",
-        "user_id": "16458846"
-    },
-    {
-        "distance_in_meters": 1900.0,
-        "duration_in_seconds": 360.0,
-        "pickup_in_meters": 200.0,
-        "pickup_in_seconds": 60.0,
-        "driver_rating": 4.6,
-        "user_rating": 4.9,
-        "price_start_local": 150.0,
-        "order_timestamp": "2024-01-15T18:20:00",
-        "driver_platform": "ios",
-        "driver_reg_date": "2023-04-10",
-        "carname": "Kia",
-        "carmodel": "Rio",
-        "driver_id": "29368889",
-        "user_id": "16458846"
-    },
-    {
-        "distance_in_meters": 5100.0,
-        "duration_in_seconds": 840.0,
-        "pickup_in_meters": 700.0,
-        "pickup_in_seconds": 180.0,
-        "driver_rating": 4.8,
-        "user_rating": 4.6,
-        "price_start_local": 280.0,
-        "order_timestamp": "2024-01-15T20:15:00",
-        "driver_platform": "android",
-        "driver_reg_date": "2023-01-25",
-        "carname": "Volkswagen",
-        "carmodel": "Polo",
-        "driver_id": "29368889",
-        "user_id": "16458846"
-    }
-];
-
-// Текущие данные
-let currentOrderData = null;
+let currentOrder = null;
 let priceCurve = [];
-let selectedPrice = null;
+let selectedIndex = 0;
 
+// -----------------------------
+// Выбор случайного заказа при открытии меню
+// -----------------------------
+menuToggleBtn.addEventListener('click', async () => {
+    console.log('Кнопка меню нажата');
+    toggleMenu();
+
+    if (!currentOrder || !menuVisible) {
+        console.log('Загружаем новый заказ...');
+        currentOrder = getRandomOrder();
+        console.log('Выбран заказ:', currentOrder);
+        await loadOptimalPrices(currentOrder);
+        updateUI(selectedIndex);
+    }
+});
+
+// -----------------------------
 // Функция переключения меню
+// -----------------------------
+let menuVisible = false;
 function toggleMenu() {
-    isMenuVisible = !isMenuVisible;
-    
-    if (isMenuVisible) {
-        // Показываем меню - выбираем случайный заказ и загружаем данные
+    menuVisible = !menuVisible;
+    console.log('Меню видимо:', menuVisible);
+
+    if (menuVisible) {
         settingsMenu.classList.remove('collapsed');
         menuToggleBtn.classList.remove('collapsed');
         menuContainer.style.backgroundImage = "url('/static/images/maps-2.png')";
         menuContainer.style.height = "380px";
-        
-        // Выбираем случайный заказ и загружаем данные
-        selectRandomOrderAndLoadPrices();
     } else {
-        // Скрываем меню
         settingsMenu.classList.add('collapsed');
         menuToggleBtn.classList.add('collapsed');
         menuContainer.style.backgroundImage = "url('/static/images/maps-1.png')";
@@ -124,246 +53,231 @@ function toggleMenu() {
     }
 }
 
-// Функция выбора случайного заказа и загрузки цен
-async function selectRandomOrderAndLoadPrices() {
-    try {
-        // Выбираем случайный заказ
-        const randomIndex = Math.floor(Math.random() * orderExamples.length);
-        currentOrderData = orderExamples[randomIndex];
-        
-        // Обновляем информацию о заказе в интерфейсе
-        updateOrderInfo(currentOrderData);
-        
-        // Загружаем оптимальные цены с сервера
-        await loadOptimalPrices(currentOrderData);
-        
-    } catch (error) {
-        console.error('Ошибка при выборе заказа:', error);
-        // Fallback на локальные данные
-        priceCurve = [
-            {"price": 315.0, "probability": 0.92, "expected_revenue": 289.8},
-            {"price": 350.0, "probability": 0.85, "expected_revenue": 297.5},
-            {"price": 420.0, "probability": 0.72, "expected_revenue": 302.4},
-            {"price": 490.0, "probability": 0.55, "expected_revenue": 269.5},
-            {"price": 525.0, "probability": 0.45, "expected_revenue": 236.25}
-        ];
-        initializeSlider();
-    }
+// -----------------------------
+// Случайный заказ
+// -----------------------------
+function getRandomOrder() {
+    const examples = [
+        {distance_in_meters: 3500, duration_in_seconds: 600, pickup_in_meters: 500, pickup_in_seconds: 120, driver_rating: 4.8, user_rating: 4.9, price_start_local: 200, order_timestamp: "2024-01-15T12:00:00", driver_platform: "android", driver_reg_date: "2023-01-01", carname: "Toyota", carmodel: "Camry", driver_id: "29368889", user_id: "16458846"},
+        {distance_in_meters: 2800, duration_in_seconds: 480, pickup_in_meters: 300, pickup_in_seconds: 90, driver_rating: 4.9, user_rating: 4.7, price_start_local: 180, order_timestamp: "2024-01-15T14:30:00", driver_platform: "ios", driver_reg_date: "2023-03-15", carname: "Honda", carmodel: "Civic", driver_id: "29368889", user_id: "16458846"},
+        {distance_in_meters: 4200, duration_in_seconds: 720, pickup_in_meters: 600, pickup_in_seconds: 150, driver_rating: 4.7, user_rating: 4.8, price_start_local: 250, order_timestamp: "2024-01-15T16:45:00", driver_platform: "android", driver_reg_date: "2023-02-20", carname: "Hyundai", carmodel: "Solaris", driver_id: "29368889", user_id: "16458846"},
+        {distance_in_meters: 1900, duration_in_seconds: 360, pickup_in_meters: 200, pickup_in_seconds: 60, driver_rating: 4.6, user_rating: 4.9, price_start_local: 150, order_timestamp: "2024-01-15T18:20:00", driver_platform: "ios", driver_reg_date: "2023-04-10", carname: "Kia", carmodel: "Rio", driver_id: "29368889", user_id: "16458846"},
+        {distance_in_meters: 5100, duration_in_seconds: 840, pickup_in_meters: 700, pickup_in_seconds: 180, driver_rating: 4.8, user_rating: 4.6, price_start_local: 280, order_timestamp: "2024-01-15T20:15:00", driver_platform: "android", driver_reg_date: "2023-01-25", carname: "Volkswagen", carmodel: "Polo", driver_id: "29368889", user_id: "16458846"}
+    ];
+    return examples[Math.floor(Math.random() * examples.length)];
 }
 
-// Функция обновления информации о заказе
-function updateOrderInfo(orderData) {
-    const orderNumberElement = document.querySelector('#zagalovok .predict-text');
-    const fromElement = document.querySelector('#first-row .first-text-pred');
-    const toElement = document.querySelector('#second-row .first-text-pred');
-    const proposedPriceElement = document.querySelector('#first-row .second-text-pred');
-    const timeElement = document.querySelector('#second-row .second-text-pred');
+// -----------------------------
+// Загрузка цен через Flask-прокси
+// -----------------------------
+async function loadOptimalPrices(order) {
+    console.log('Начинаем загрузку оптимальных цен...');
     
-    // Генерируем случайный номер заказа
-    const orderNumber = Math.floor(Math.random() * 10000) + 1000;
-    
-    // Обновляем интерфейс
-    orderNumberElement.textContent = `Заказ №${orderNumber}`;
-    fromElement.textContent = `Расстояние: ${Math.round(orderData.distance_in_meters / 1000)} км`;
-    toElement.textContent = `Машина: ${orderData.carmodel}`;
-    proposedPriceElement.textContent = `Предложенная цена: ${Math.round(orderData.price_start_local)} руб.`;
-    
-    // Форматируем время
-    const orderTime = new Date(orderData.order_timestamp);
-    const timeString = orderTime.toLocaleTimeString('ru-RU', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-    });
-    timeElement.textContent = `Время подачи: ${timeString}`;
-}
-
-// Функция загрузки оптимальных цен с сервера
-async function loadOptimalPrices(orderData) {
     try {
-        const response = await fetch('http://5.129.193.114:8000/api/v1/get_optimal_prices', {
+        const response = await fetch('/proxy/get_optimal_prices', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(orderData)
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(order)
         });
+        
+        console.log('Ответ получен, статус:', response.status);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const data = await response.json();
-        
-        // Преобразуем данные в нужный формат
-        priceCurve = data.price_curve.map(item => ({
-            price: item.price,
-            probability: item.probability_percent / 100,
-            expected_revenue: item.expected_revenue
-        }));
-        
-        // Инициализируем слайдер с новыми данными
-        initializeSlider();
-        
-    } catch (error) {
-        console.error('Ошибка загрузки оптимальных цен:', error);
-        // Fallback данные
+        console.log('Данные от сервера:', data);
+
+        // Сохраняем все поля и сортируем по цене
+        priceCurve = data.price_curve
+            .sort((a, b) => a.price - b.price)
+            .map(p => ({
+                price: p.price,
+                probability: p.probability_percent,
+                expected_revenue: p.expected_revenue,
+                service_earnings: p.service_earnings,
+                driver_earnings: p.driver_earnings
+            }));
+
+        console.log('Отсортированные данные priceCurve:', priceCurve);
+
+    } catch (err) {
+        console.error("Ошибка загрузки цен:", err);
+
+        // fallback - тоже сортируем
         priceCurve = [
-            {"price": 315.0, "probability": 0.92, "expected_revenue": 289.8},
-            {"price": 350.0, "probability": 0.85, "expected_revenue": 297.5},
-            {"price": 420.0, "probability": 0.72, "expected_revenue": 302.4},
-            {"price": 490.0, "probability": 0.55, "expected_revenue": 269.5},
-            {"price": 525.0, "probability": 0.45, "expected_revenue": 236.25}
-        ];
-        initializeSlider();
+            {price: 205, probability: 67.1, expected_revenue: 137.5, service_earnings: 17.6, driver_earnings: 119.9},
+            {price: 216, probability: 58.4, expected_revenue: 126.12, service_earnings: 16.14, driver_earnings: 109.97},
+            {price: 183, probability: 70.7, expected_revenue: 129.35, service_earnings: 16.56, driver_earnings: 112.79},
+            {price: 238, probability: 47, expected_revenue: 111.85, service_earnings: 14.32, driver_earnings: 97.53},
+            {price: 162, probability: 76.2, expected_revenue: 123.51, service_earnings: 15.81, driver_earnings: 107.7}
+        ].sort((a, b) => a.price - b.price);
+
+        console.log('Fallback данные (отсортированные):', priceCurve);
     }
+    
+    // Инициализируем слайдер с отсортированными данными
+    initSlider();
 }
 
-// Функция отправки выбранного заказа
-async function submitOrder() {
-    if (!currentOrderData || !selectedPrice) {
-        alert('Пожалуйста, выберите цену перед отправкой');
+// -----------------------------
+// Инициализация ползунка
+// -----------------------------
+function initSlider() {
+    console.log('Инициализация слайдера, priceCurve.length:', priceCurve.length);
+    
+    if (priceCurve.length === 0) {
+        console.error('Нет данных для инициализации слайдера');
         return;
     }
-    
-    try {
-        const orderData = {
-            order_id: Math.floor(Math.random() * 1000000).toString(),
-            order_timestamp: currentOrderData.order_timestamp,
-            distance_in_meters: currentOrderData.distance_in_meters,
-            duration_in_seconds: currentOrderData.duration_in_seconds,
-            tender_id: `tender_${Math.floor(Math.random() * 100000)}`,
-            tender_timestamp: new Date().toISOString(),
-            driver_id: parseInt(currentOrderData.driver_id),
-            driver_reg_date: currentOrderData.driver_reg_date,
-            driver_rating: currentOrderData.driver_rating,
-            carmodel: currentOrderData.carmodel,
-            carname: currentOrderData.carname,
-            platform: currentOrderData.driver_platform,
-            pickup_in_meters: currentOrderData.pickup_in_meters,
-            pickup_in_seconds: currentOrderData.pickup_in_seconds,
-            user_id: parseInt(currentOrderData.user_id),
-            price_start_local: currentOrderData.price_start_local,
-            price_bid_local: selectedPrice.price,
-            is_done: true,
-            user_rating: currentOrderData.user_rating
-        };
-        
-        const response = await fetch('http://5.129.193.114:8000/api/v1/record_order', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(orderData)
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        console.log('Заказ успешно отправлен:', result);
-        alert('Заказ успешно отправлен!');
-        
-    } catch (error) {
-        console.error('Ошибка отправки заказа:', error);
-        alert('Ошибка отправки заказа. Попробуйте еще раз.');
-    }
-}
 
-// Функция инициализации слайдера
-function initializeSlider() {
-    // Настраиваем слайдер по количеству точек
     rangeInput.min = 0;
     rangeInput.max = priceCurve.length - 1;
+    rangeInput.step = 1;
     rangeInput.value = 0;
-    
-    // Показываем первый вариант
-    updatePriceData(0);
-    
-    // Добавляем обработчик слайдера
-    rangeInput.addEventListener('input', function() {
-        const selectedIndex = parseInt(this.value);
-        updatePriceData(selectedIndex);
+    selectedIndex = 0;
+
+    console.log('Слайдер настроен:', {
+        min: rangeInput.min,
+        max: rangeInput.max,
+        value: rangeInput.value,
+        points: priceCurve.length
     });
-    
-    // Добавляем обработчики для кнопок
-    addButtonHandlers();
+
+    // Удаляем старые обработчики чтобы избежать дублирования
+    rangeInput.oninput = null;
+    buttonSafe.onclick = null;
+    buttonMean.onclick = null;
+    buttonRisk.onclick = null;
+
+    // Добавляем новые обработчики
+    rangeInput.addEventListener('input', () => {
+        selectedIndex = parseInt(rangeInput.value);
+        console.log('Слайдер изменен на индекс:', selectedIndex, 'Цена:', priceCurve[selectedIndex].price);
+        updateUI(selectedIndex);
+    });
+
+    buttonSafe.addEventListener('click', () => {
+        selectedIndex = 0;
+        rangeInput.value = selectedIndex;
+        console.log('Кнопка Safe:', selectedIndex, 'Цена:', priceCurve[selectedIndex].price);
+        updateUI(selectedIndex);
+    });
+
+    buttonMean.addEventListener('click', () => {
+        selectedIndex = findMaxRevenueIndex();
+        rangeInput.value = selectedIndex;
+        console.log('Кнопка Mean:', selectedIndex, 'Цена:', priceCurve[selectedIndex].price);
+        updateUI(selectedIndex);
+    });
+
+    buttonRisk.addEventListener('click', () => {
+        selectedIndex = priceCurve.length - 1;
+        rangeInput.value = selectedIndex;
+        console.log('Кнопка Risk:', selectedIndex, 'Цена:', priceCurve[selectedIndex].price);
+        updateUI(selectedIndex);
+    });
+
+    // Обновляем интерфейс сразу после инициализации
+    updateUI(selectedIndex);
 }
 
-// Функция добавления обработчиков для кнопок
-function addButtonHandlers() {
-    // Safe - минимальная цена (самый безопасный вариант)
-    buttonCardSafe.addEventListener('click', function() {
-        const safeIndex = 0;
-        rangeInput.value = safeIndex;
-        updatePriceData(safeIndex);
-        highlightActiveButton(this);
-    });
-    
-    // Mean - средняя цена (максимальная доходность)
-    buttonCardMean.addEventListener('click', function() {
-        const meanIndex = findMaxRevenueIndex();
-        rangeInput.value = meanIndex;
-        updatePriceData(meanIndex);
-        highlightActiveButton(this);
-    });
-    
-    // Risk - максимальная цена (самый рискованный вариант)
-    buttonCardRisk.addEventListener('click', function() {
-        const riskIndex = priceCurve.length - 1;
-        rangeInput.value = riskIndex;
-        updatePriceData(riskIndex);
-        highlightActiveButton(this);
-    });
-}
-
-// Функция для нахождения индекса с максимальной доходностью
+// -----------------------------
+// Найти индекс максимальной доходности
+// -----------------------------
 function findMaxRevenueIndex() {
-    let maxRevenue = -1;
-    let maxIndex = 0;
-    
-    for (let i = 0; i < priceCurve.length; i++) {
+    let maxIdx = 0;
+    let maxRevenue = priceCurve[0].expected_revenue;
+    for (let i = 1; i < priceCurve.length; i++) {
         if (priceCurve[i].expected_revenue > maxRevenue) {
             maxRevenue = priceCurve[i].expected_revenue;
-            maxIndex = i;
+            maxIdx = i;
         }
     }
+    console.log('Максимальная доходность найдена по индексу:', maxIdx);
+    return maxIdx;
+}
+
+// -----------------------------
+// Обновление интерфейса
+// -----------------------------
+function updateUI(idx) {
+    console.log('Обновление UI, индекс:', idx);
     
-    return maxIndex;
+    if (!priceCurve || priceCurve.length === 0) {
+        console.error('Нет данных для обновления интерфейса');
+        priceElement.textContent = 'Нет данных';
+        probabilityElement.textContent = 'Вероятность принятия: —';
+        revenueElement.textContent = 'Доходность: —';
+        return;
+    }
+
+    if (idx < 0 || idx >= priceCurve.length) {
+        console.error('Некорректный индекс:', idx);
+        return;
+    }
+
+    const selected = priceCurve[idx];
+    console.log('Выбранные данные для отображения:', selected);
+
+    // Обновляем цену и доходность
+    priceElement.textContent = `${selected.price} руб.`;
+    probabilityElement.textContent = `Вероятность принятия: ${selected.probability.toFixed(1)}%`;
+    revenueElement.textContent = `Доходность: ${selected.expected_revenue.toFixed(1)} руб.`;
+
+    // Обновляем данные заказа
+    if (currentOrder) {
+        document.querySelector('#zagalovok h1').textContent = `Заказ №${Math.floor(Math.random() * 1000) + 1000}`;
+        document.querySelector('#first-row .first-text-pred').textContent = `Расстояние: ${(currentOrder.distance_in_meters / 1000).toFixed(1)} км`;
+        document.querySelector('#first-row .second-text-pred').textContent = `Машина: ${currentOrder.carname || '—'} ${currentOrder.carmodel || ''}`;
+        document.querySelector('#second-row .first-text-pred').textContent = `Водитель: ${currentOrder.driver_id || '—'}`;
+        document.querySelector('#second-row .second-text-pred').textContent = `Рейтинг: ${currentOrder.driver_rating || '—'}`;
+    }
+
+    console.log('Интерфейс успешно обновлен');
 }
 
-// Функция обновления данных
-function updatePriceData(selectedIndex) {
-    selectedPrice = priceCurve[selectedIndex];
+// -----------------------------
+// Отправка заказа
+// -----------------------------
+document.getElementById('button').addEventListener('click', async () => {
+    console.log('Кнопка отправки нажата');
     
-    // Обновляем интерфейс
-    priceElement.textContent = `${Math.round(selectedPrice.price)} руб.`;
-    probabilityElement.innerHTML = `Вероятность принятия: ${Math.round(selectedPrice.probability * 100)}%`;
-    revenueElement.innerHTML = `Доходность: ${Math.round(selectedPrice.expected_revenue)} руб.`;
-}
+    if (!currentOrder || priceCurve.length === 0) {
+        alert('Нет данных заказа!');
+        return;
+    }
 
-// Функция для подсветки активной кнопки
-function highlightActiveButton(activeButton) {
-    [buttonCardSafe, buttonCardMean, buttonCardRisk].forEach(button => {
-        button.classList.remove('active');
-    });
-    activeButton.classList.add('active');
-}
+    const selected = priceCurve[selectedIndex];
+    const orderToSend = {
+        ...currentOrder,
+        price_bid_local: selected.price
+    };
 
-// Добавляем обработчик для кнопки отправки
-document.getElementById('button').addEventListener('click', submitOrder);
+    console.log('Отправляемые данные:', orderToSend);
 
-// Добавляем обработчик события для кнопки меню
-menuToggleBtn.addEventListener('click', toggleMenu);
+    try {
+        const resp = await fetch('/proxy/record_order', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(orderToSend)
+        });
+        const result = await resp.json();
+        alert('Заказ отправлен!');
+        console.log('Заказ отправлен:', result);
+    } catch (err) {
+        console.error('Ошибка отправки заказа:', err);
+        alert('Ошибка отправки заказа!');
+    }
+});
 
-// Инициализируем состояние
-settingsMenu.classList.add('collapsed');
-menuToggleBtn.classList.add('collapsed');
-isMenuVisible = false;
-menuContainer.style.height = "760px";
-menuContainer.style.backgroundImage = "url('/static/images/maps-1.png')";
-
-// Загружаем начальные данные при загрузке страницы
-document.addEventListener('DOMContentLoaded', function() {
-    // Можно сразу выбрать случайный заказ или оставить пустым до открытия меню
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Страница загружена, DOM готов');
+    // Начальное состояние - меню скрыто
+    settingsMenu.classList.add('collapsed');
+    menuToggleBtn.classList.add('collapsed');
+    menuContainer.style.backgroundImage = "url('/static/images/maps-1.png')";
+    menuContainer.style.height = "760px";
 });
